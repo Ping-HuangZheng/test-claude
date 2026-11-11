@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="clock_black">#FF000000</color>
+
+    <style name="Theme.StandbyClock" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/clock_black</item>
+        <item name="android:statusBarColor">@color/clock_black</item>
+        <item name="android:navigationBarColor">@color/clock_black</item>
+    </style>
+</resources>
