@@ -48,6 +48,7 @@ fun SettingsScreen(
     settings: ClockSettings,
     onUpdate: SettingsUpdater,
     onBack: () -> Unit,
+    onOpenAlarm: () -> Unit = {},
     extraSections: @Composable ColumnScope.() -> Unit = {},
 ) {
     Column(
@@ -119,6 +120,10 @@ fun SettingsScreen(
                 actionEnabled = settings.nightBrightness != ClockSettings.DEFAULT_NIGHT_BRIGHTNESS,
                 onAction = { onUpdate { it.copy(nightBrightness = ClockSettings.DEFAULT_NIGHT_BRIGHTNESS) } },
             )
+        }
+
+        Section("鬧鐘") {
+            OutlinedButton(onClick = onOpenAlarm) { Text("鬧鐘設定") }
         }
 
         Section("充電待機（螢幕保護程式）") {

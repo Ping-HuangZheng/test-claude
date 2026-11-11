@@ -2,6 +2,7 @@ package com.nightstand.clock.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.nightstand.clock.math.AlarmConfig
 import com.nightstand.clock.math.HourFormat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +28,7 @@ data class ClockSettings(
     val dayBrightness: Float = BRIGHTNESS_FOLLOW_SYSTEM,
     /** 夜間亮度 0..1。 */
     val nightBrightness: Float = DEFAULT_NIGHT_BRIGHTNESS,
+    val alarm: AlarmConfig = AlarmConfig(),
 ) {
     val faceScale: Float get() = faceScales[face.ordinal]
 
@@ -69,6 +71,13 @@ class SettingsStore private constructor(context: Context) {
             showQuotes = prefs.getBoolean(KEY_QUOTES, defaults.showQuotes),
             dayBrightness = prefs.getFloat(KEY_DAY_BRIGHTNESS, defaults.dayBrightness),
             nightBrightness = prefs.getFloat(KEY_NIGHT_BRIGHTNESS, defaults.nightBrightness),
+            alarm = AlarmConfig(
+                enabled = prefs.getBoolean(KEY_ALARM_ENABLED, defaults.alarm.enabled),
+                hour = prefs.getInt(KEY_ALARM_HOUR, defaults.alarm.hour),
+                minute = prefs.getInt(KEY_ALARM_MINUTE, defaults.alarm.minute),
+                repeatMask = prefs.getInt(KEY_ALARM_REPEAT, defaults.alarm.repeatMask),
+                snoozeUntilMillis = prefs.getLong(KEY_ALARM_SNOOZE, defaults.alarm.snoozeUntilMillis),
+            ),
         )
     }
 
@@ -82,6 +91,11 @@ class SettingsStore private constructor(context: Context) {
             putBoolean(KEY_QUOTES, s.showQuotes)
             putFloat(KEY_DAY_BRIGHTNESS, s.dayBrightness)
             putFloat(KEY_NIGHT_BRIGHTNESS, s.nightBrightness)
+            putBoolean(KEY_ALARM_ENABLED, s.alarm.enabled)
+            putInt(KEY_ALARM_HOUR, s.alarm.hour)
+            putInt(KEY_ALARM_MINUTE, s.alarm.minute)
+            putInt(KEY_ALARM_REPEAT, s.alarm.repeatMask)
+            putLong(KEY_ALARM_SNOOZE, s.alarm.snoozeUntilMillis)
         }.apply()
     }
 
@@ -99,6 +113,11 @@ class SettingsStore private constructor(context: Context) {
         private const val KEY_QUOTES = "show_quotes"
         private const val KEY_DAY_BRIGHTNESS = "day_brightness"
         private const val KEY_NIGHT_BRIGHTNESS = "night_brightness"
+        private const val KEY_ALARM_ENABLED = "alarm_enabled"
+        private const val KEY_ALARM_HOUR = "alarm_hour"
+        private const val KEY_ALARM_MINUTE = "alarm_minute"
+        private const val KEY_ALARM_REPEAT = "alarm_repeat"
+        private const val KEY_ALARM_SNOOZE = "alarm_snooze_until"
 
         @Volatile
         private var instance: SettingsStore? = null

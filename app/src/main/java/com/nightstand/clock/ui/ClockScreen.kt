@@ -42,6 +42,7 @@ import com.nightstand.clock.data.ClockSettings
 import com.nightstand.clock.data.FaceType
 import com.nightstand.clock.data.rememberBatteryInfo
 import com.nightstand.clock.data.rememberClockTime
+import com.nightstand.clock.math.AlarmMath
 import com.nightstand.clock.math.ClockMath
 import com.nightstand.clock.math.Quotes
 import com.nightstand.clock.ui.faces.AnalogFace
@@ -67,6 +68,7 @@ fun ClockScreen(
     interactive: Boolean,
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
+    onOpenAlarm: () -> Unit = {},
     /** 拖曳調亮度時即時套用到視窗；null 代表拖曳結束、回到設定值。 */
     onLiveBrightness: (Float?) -> Unit = {},
 ) {
@@ -198,6 +200,10 @@ fun ClockScreen(
                             onUpdate { it.copy(nightMode = !it.nightMode) }
                             touched()
                         },
+                        ControlAction("鬧鐘", highlighted = settings.alarm.enabled) {
+                            controlsVisible = false
+                            onOpenAlarm()
+                        },
                         ControlAction("設定") {
                             controlsVisible = false
                             onOpenSettings()
@@ -231,6 +237,7 @@ fun ClockContent(
     val use24 = ClockMath.use24Hour(settings.hourFormat, systemIs24Hour)
     val time = ClockMath.timeParts(now.hour, now.minute, now.second, use24, settings.showSeconds)
     val date = ClockMath.dateText(now.monthValue, now.dayOfMonth, now.dayOfWeek.value)
+    val alarmText = AlarmMath.nextRing(settings.alarm, now)?.let { AlarmMath.statusText(it, now, use24) }
 
     // 防烙印：每分鐘把整個畫面移一點，用 2 秒慢慢滑過去，看不出跳動。
     val shift = ClockMath.burnInShift(now.toEpochSecond() / 60)
@@ -254,7 +261,7 @@ fun ClockContent(
         ) {
             StatusRow(
                 date = date,
-                extra = null,
+                extra = alarmText,
                 battery = battery,
                 color = colors.secondary,
                 textSize = infoSize,

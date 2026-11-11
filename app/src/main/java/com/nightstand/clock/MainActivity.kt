@@ -15,15 +15,17 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nightstand.clock.alarm.AlarmActions
 import com.nightstand.clock.data.SettingsStore
 import com.nightstand.clock.math.ClockMath
+import com.nightstand.clock.ui.AlarmScreen
 import com.nightstand.clock.ui.ApplyWindowBrightness
 import com.nightstand.clock.ui.ClockScreen
 import com.nightstand.clock.ui.SettingsScreen
 import com.nightstand.clock.ui.theme.AppTheme
 
 /** App 內的頁面。頁面很少，不需要導覽函式庫。 */
-private enum class Screen { CLOCK, SETTINGS }
+private enum class Screen { CLOCK, SETTINGS, ALARM }
 
 class MainActivity : ComponentActivity() {
 
@@ -35,6 +37,8 @@ class MainActivity : ComponentActivity() {
         hideSystemBars()
         // 待機時鐘：App 開著時螢幕一直亮著。
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // 確保鬧鐘有排程（例如 App 被強制停止後，系統會清掉排程）。
+        AlarmActions.resync(this)
         setContent {
             val settings by store.settings.collectAsStateWithLifecycle()
             var screen by rememberSaveable { mutableStateOf(Screen.CLOCK) }
@@ -56,6 +60,7 @@ class MainActivity : ComponentActivity() {
                     onUpdate = store::update,
                     interactive = true,
                     onOpenSettings = { screen = Screen.SETTINGS },
+                    onOpenAlarm = { screen = Screen.ALARM },
                     onLiveBrightness = { liveBrightness = it },
                 )
                 Screen.SETTINGS -> AppTheme(settings.nightMode) {
@@ -63,7 +68,11 @@ class MainActivity : ComponentActivity() {
                         settings = settings,
                         onUpdate = store::update,
                         onBack = { screen = Screen.CLOCK },
+                        onOpenAlarm = { screen = Screen.ALARM },
                     )
+                }
+                Screen.ALARM -> AppTheme(settings.nightMode) {
+                    AlarmScreen(settings = settings, onBack = { screen = Screen.CLOCK })
                 }
             }
         }

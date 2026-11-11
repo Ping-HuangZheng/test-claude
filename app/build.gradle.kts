@@ -39,12 +39,12 @@ android {
     }
 }
 
-// 截圖預覽（Robolectric 把畫面畫成 PNG）只在加上 -Ppreview 時執行，
-// 一般的 ./gradlew test 不跑，保持單元測試又快又單純。
+// Robolectric 測試（截圖預覽、鬧鐘流程）只在加上 -Probo 時執行：
+// 第一次要下載約 200MB 的模擬 Android 環境，一般的 ./gradlew test 只跑純 JVM 單元測試。
 tasks.withType<Test>().configureEach {
-    if (!project.hasProperty("preview")) {
-        exclude("**/preview/**")
-        // app 目前只有預覽測試，排除後沒有測試可跑是正常的。
+    if (!project.hasProperty("robo")) {
+        exclude("**/robo/**")
+        // app 目前只有 Robolectric 測試，排除後沒有測試可跑是正常的。
         failOnNoDiscoveredTests = false
     }
     // Robolectric 在 JDK 17+ 需要存取 JDK 內部 API。

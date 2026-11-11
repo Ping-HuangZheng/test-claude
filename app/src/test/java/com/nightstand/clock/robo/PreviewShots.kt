@@ -1,4 +1,4 @@
-package com.nightstand.clock.preview
+package com.nightstand.clock.robo
 
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
@@ -13,7 +13,11 @@ import com.nightstand.clock.data.BatteryInfo
 import com.nightstand.clock.data.ClockSettings
 import com.nightstand.clock.data.FaceType
 import com.nightstand.clock.math.ChargeState
+import com.nightstand.clock.alarm.RingScreen
+import com.nightstand.clock.math.AlarmConfig
+import com.nightstand.clock.math.AlarmMath
 import com.nightstand.clock.math.HourFormat
+import com.nightstand.clock.ui.AlarmScreen
 import com.nightstand.clock.ui.ClockContent
 import com.nightstand.clock.ui.ClockScreen
 import com.nightstand.clock.ui.SettingsScreen
@@ -37,7 +41,7 @@ import java.time.ZonedDateTime
 
 /**
  * 開發用的截圖預覽：把各畫面畫成 PNG 放到 build/preview/，方便在沒有手機時檢查版面。
- * 執行：./gradlew :app:testDebugUnitTest -Ppreview
+ * 執行：./gradlew :app:testDebugUnitTest -Probo
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -217,5 +221,29 @@ class PreviewShots {
         rule.waitForIdle()
         assertEquals(FaceType.DIGITAL, settings.face)
         assertEquals(null, live)
+    }
+
+    @Test
+    fun statusWithAlarm() = shot(
+        "status_with_alarm",
+        clock(ClockSettings(face = FaceType.DIGITAL, alarm = AlarmConfig(enabled = true, hour = 6, minute = 30))),
+    )
+
+    @Test
+    @Config(qualifiers = "w360dp-h780dp-port-xhdpi")
+    fun alarmPage() = shot("alarm_page") {
+        AppTheme(nightMode = false) {
+            AlarmScreen(
+                settings = ClockSettings(alarm = AlarmConfig(enabled = true, hour = 6, minute = 30, repeatMask = AlarmMath.WEEKDAYS)),
+                onBack = {},
+            )
+        }
+    }
+
+    @Test
+    fun ringScreen() = shot("ring_screen") {
+        AppTheme(nightMode = true) {
+            RingScreen(settings = ClockSettings(nightMode = true), onSnooze = {}, onDismiss = {})
+        }
     }
 }
