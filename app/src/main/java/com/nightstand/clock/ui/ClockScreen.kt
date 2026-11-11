@@ -43,6 +43,7 @@ import com.nightstand.clock.data.FaceType
 import com.nightstand.clock.data.rememberBatteryInfo
 import com.nightstand.clock.data.rememberClockTime
 import com.nightstand.clock.math.ClockMath
+import com.nightstand.clock.math.Quotes
 import com.nightstand.clock.ui.faces.AnalogFace
 import com.nightstand.clock.ui.faces.DigitalFace
 import com.nightstand.clock.ui.faces.FlipFace
@@ -259,6 +260,16 @@ fun ClockContent(
                 textSize = infoSize,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
+            if (settings.showQuotes) {
+                QuoteLine(
+                    quote = Quotes.at(now.toInstant().toEpochMilli()),
+                    colors = colors,
+                    textSize = infoSize,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(horizontal = infoSize * 2),
+                )
+            }
             AnimatedContent(
                 targetState = settings.face,
                 transitionSpec = {
@@ -269,7 +280,7 @@ fun ClockContent(
                 label = "face",
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(vertical = infoSize * 2.5f),
+                    .padding(top = infoSize * 2.5f, bottom = if (settings.showQuotes) infoSize * 4f else infoSize * 2.5f),
             ) { face ->
                 val faceModifier = Modifier.fillMaxSize()
                 when (face) {

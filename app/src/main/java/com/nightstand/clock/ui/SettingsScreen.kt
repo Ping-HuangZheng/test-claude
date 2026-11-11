@@ -96,6 +96,9 @@ fun SettingsScreen(
             SwitchRow("夜間模式", settings.nightMode, "暗紅色文字＋低亮度，適合關燈後") { v ->
                 onUpdate { it.copy(nightMode = v) }
             }
+            SwitchRow("名言輪播", settings.showQuotes, "聖經、論語、老子共 60 句，每 10 分鐘換一句") { v ->
+                onUpdate { it.copy(showQuotes = v) }
+            }
             Spacer(Modifier.height(8.dp))
             Text(
                 "在時鐘畫面的左右兩側上下滑動可以調亮度（只影響這個 App）。",

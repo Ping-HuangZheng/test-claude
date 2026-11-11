@@ -77,6 +77,9 @@ class PreviewShots {
     fun digital24() = shot("digital_24h", clock(ClockSettings(face = FaceType.DIGITAL)))
 
     @Test
+    fun noQuotes() = shot("digital_no_quotes", clock(ClockSettings(face = FaceType.DIGITAL, showQuotes = false)))
+
+    @Test
     fun digital12Seconds() = shot(
         "digital_12h_seconds",
         clock(ClockSettings(face = FaceType.DIGITAL, hourFormat = HourFormat.H12, showSeconds = true)),
