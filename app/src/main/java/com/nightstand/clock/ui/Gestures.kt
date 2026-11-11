@@ -45,12 +45,15 @@ fun Modifier.clockGestures(callbacks: ClockGestureCallbacks): Modifier {
             val start = down.position
             var mode = GestureMode.UNDECIDED
             var total = Offset.Zero
+            // 子元件（例如控制列的按鈕）已經處理過的點擊，不要再當成「點一下畫面」。
+            var handledByChild = down.isConsumed
             val slop = viewConfiguration.touchSlop
             val width = size.width.toFloat()
             val height = size.height.toFloat()
 
             while (true) {
                 val event = awaitPointerEvent()
+                if (event.changes.any { it.isConsumed }) handledByChild = handledByChild || mode == GestureMode.UNDECIDED
                 val pressed = event.changes.count { it.pressed }
                 if (pressed == 0) break
 
@@ -89,7 +92,7 @@ fun Modifier.clockGestures(callbacks: ClockGestureCallbacks): Modifier {
             }
 
             when (mode) {
-                GestureMode.UNDECIDED -> cb.onTap()
+                GestureMode.UNDECIDED -> if (!handledByChild) cb.onTap()
                 GestureMode.SWIPE -> ClockMath.swipeDirection(total.x, width).let { if (it != 0) cb.onSwipe(it) }
                 GestureMode.PINCH -> cb.onZoomEnd()
                 GestureMode.BRIGHTNESS -> cb.onBrightnessEnd()

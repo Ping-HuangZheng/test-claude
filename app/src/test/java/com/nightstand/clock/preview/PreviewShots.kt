@@ -7,7 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.nightstand.clock.data.BatteryInfo
 import com.nightstand.clock.data.ClockSettings
@@ -15,6 +15,11 @@ import com.nightstand.clock.data.FaceType
 import com.nightstand.clock.math.ChargeState
 import com.nightstand.clock.math.HourFormat
 import com.nightstand.clock.ui.ClockContent
+import com.nightstand.clock.ui.ClockScreen
+import com.nightstand.clock.ui.SettingsScreen
+import com.nightstand.clock.ui.theme.AppTheme
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.click
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -122,5 +127,32 @@ class PreviewShots {
         save("flip_anim_phase1")
         rule.mainClock.advanceTimeBy(200)
         save("flip_anim_phase2")
+    }
+
+    /** 點一下畫面後出現的控制列。 */
+    @Test
+    fun controlsVisible() {
+        rule.setContent {
+            ClockScreen(settings = ClockSettings(face = FaceType.DIGITAL), onUpdate = {}, interactive = true)
+        }
+        rule.onRoot().performTouchInput { click(center) }
+        rule.waitForIdle()
+        save("controls_visible")
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h780dp-port-xhdpi")
+    fun settingsPage() = shot("settings") {
+        AppTheme(nightMode = false) {
+            SettingsScreen(settings = ClockSettings(showSeconds = true), onUpdate = {}, onBack = {})
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h780dp-port-xhdpi")
+    fun settingsPageNight() = shot("settings_night") {
+        AppTheme(nightMode = true) {
+            SettingsScreen(settings = ClockSettings(nightMode = true), onUpdate = {}, onBack = {})
+        }
     }
 }

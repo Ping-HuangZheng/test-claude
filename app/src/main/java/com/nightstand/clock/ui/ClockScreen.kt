@@ -2,6 +2,9 @@ package com.nightstand.clock.ui
 
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -16,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -37,12 +41,16 @@ import com.nightstand.clock.ui.faces.AnalogFace
 import com.nightstand.clock.ui.faces.DigitalFace
 import com.nightstand.clock.ui.faces.FlipFace
 import com.nightstand.clock.ui.theme.ClockColors
+import kotlinx.coroutines.delay
 import java.time.ZonedDateTime
 
 typealias SettingsUpdater = ((ClockSettings) -> ClockSettings) -> Unit
 
+/** 控制列沒有操作多久後自動收起。 */
+private const val CONTROLS_TIMEOUT_MILLIS = 5_000L
+
 /**
- * 時鐘主畫面（有狀態的外層）：讀時間、電量，處理手勢。
+ * 時鐘主畫面（有狀態的外層）：讀時間、電量，處理手勢和控制列。
  * [interactive] 為 false 時（螢幕保護程式）只顯示，不接手勢。
  */
 @Composable
@@ -51,26 +59,48 @@ fun ClockScreen(
     onUpdate: SettingsUpdater,
     interactive: Boolean,
     modifier: Modifier = Modifier,
+    onOpenSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val now by rememberClockTime(ClockMath.tickIntervalMillis(settings.showSeconds))
     val battery by rememberBatteryInfo()
+    val colors = ClockColors.of(settings.nightMode)
 
     // 縮放中先用暫存值，放開手指才寫入設定。
     var liveScale by remember { mutableStateOf<Float?>(null) }
     var swipeDirection by remember { mutableIntStateOf(1) }
 
+    // 控制列：每次有操作就重新倒數 5 秒。
+    var controlsVisible by remember { mutableStateOf(false) }
+    var interactionCount by remember { mutableIntStateOf(0) }
+    fun touched() {
+        interactionCount++
+    }
+    LaunchedEffect(controlsVisible, interactionCount) {
+        if (controlsVisible) {
+            delay(CONTROLS_TIMEOUT_MILLIS)
+            controlsVisible = false
+        }
+    }
+
+    fun switchFace(dir: Int) {
+        swipeDirection = dir
+        liveScale = null
+        onUpdate { s ->
+            s.copy(face = FaceType.entries[ClockMath.cycleIndex(s.face.ordinal, dir, FaceType.entries.size)])
+        }
+        touched()
+    }
+
     val gestures = ClockGestureCallbacks(
-        onTap = {},
-        onSwipe = { dir ->
-            swipeDirection = dir
-            liveScale = null
-            onUpdate { s ->
-                s.copy(face = FaceType.entries[ClockMath.cycleIndex(s.face.ordinal, dir, FaceType.entries.size)])
-            }
+        onTap = {
+            controlsVisible = !controlsVisible
+            touched()
         },
+        onSwipe = ::switchFace,
         onZoom = { factor ->
             liveScale = ClockMath.clampScale((liveScale ?: settings.faceScale) * factor)
+            touched()
         },
         onZoomEnd = {
             liveScale?.let { scale ->
@@ -85,15 +115,49 @@ fun ClockScreen(
         onBrightnessEnd = {},
     )
 
-    ClockContent(
-        now = now,
-        battery = battery,
-        settings = settings,
-        systemIs24Hour = DateFormat.is24HourFormat(context),
-        faceScale = liveScale ?: settings.faceScale,
-        swipeDirection = swipeDirection,
-        modifier = if (interactive) modifier.clockGestures(gestures) else modifier,
-    )
+    Box(
+        modifier
+            .fillMaxSize()
+            .then(if (interactive) Modifier.clockGestures(gestures) else Modifier),
+    ) {
+        ClockContent(
+            now = now,
+            battery = battery,
+            settings = settings,
+            systemIs24Hour = DateFormat.is24HourFormat(context),
+            faceScale = liveScale ?: settings.faceScale,
+            swipeDirection = swipeDirection,
+        )
+
+        if (interactive) {
+            AnimatedVisibility(
+                visible = controlsVisible,
+                enter = fadeIn() + slideInVertically { it / 2 },
+                exit = fadeOut() + slideOutVertically { it / 2 },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.displayCutout)
+                    .padding(bottom = 24.dp),
+            ) {
+                ControlBar(
+                    face = settings.face,
+                    colors = colors,
+                    onPreviousFace = { switchFace(-1) },
+                    onNextFace = { switchFace(1) },
+                    actions = listOf(
+                        ControlAction("夜間模式", highlighted = settings.nightMode) {
+                            onUpdate { it.copy(nightMode = !it.nightMode) }
+                            touched()
+                        },
+                        ControlAction("設定") {
+                            controlsVisible = false
+                            onOpenSettings()
+                        },
+                    ),
+                )
+            }
+        }
+    }
 }
 
 /** 時鐘主畫面（純顯示的內層）：所有資料都由參數傳入，方便預覽和截圖測試。 */
