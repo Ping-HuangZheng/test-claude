@@ -167,6 +167,8 @@ fun ClockScreen(
             systemIs24Hour = DateFormat.is24HourFormat(context),
             faceScale = liveScale ?: settings.faceScale,
             swipeDirection = swipeDirection,
+            // 控制列出現時先把名言淡出，免得兩者疊在一起。
+            quoteVisible = !controlsVisible,
         )
 
         if (interactive) {
@@ -233,6 +235,7 @@ fun ClockContent(
     faceScale: Float,
     swipeDirection: Int,
     modifier: Modifier = Modifier,
+    quoteVisible: Boolean = true,
 ) {
     val colors = ClockColors.of(settings.nightMode)
     val use24 = ClockMath.use24Hour(settings.hourFormat, systemIs24Hour)
@@ -269,14 +272,20 @@ fun ClockContent(
                 modifier = Modifier.align(Alignment.TopCenter),
             )
             if (settings.showQuotes) {
-                QuoteLine(
-                    quote = Quotes.at(now.toInstant().toEpochMilli()),
-                    colors = colors,
-                    textSize = infoSize,
+                AnimatedVisibility(
+                    visible = quoteVisible,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(horizontal = infoSize * 2),
-                )
+                ) {
+                    QuoteLine(
+                        quote = Quotes.at(now.toInstant().toEpochMilli()),
+                        colors = colors,
+                        textSize = infoSize,
+                    )
+                }
             }
             AnimatedContent(
                 targetState = settings.face,
