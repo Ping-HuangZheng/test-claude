@@ -20,6 +20,11 @@ import com.nightstand.clock.ui.SettingsScreen
 import com.nightstand.clock.ui.theme.AppTheme
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.swipe
+import androidx.compose.ui.test.swipeLeft
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -154,5 +159,60 @@ class PreviewShots {
         AppTheme(nightMode = true) {
             SettingsScreen(settings = ClockSettings(nightMode = true), onUpdate = {}, onBack = {})
         }
+    }
+
+    /** 左側往上滑：應出現亮度提示，且亮度變亮。 */
+    @Test
+    fun brightnessSwipe() {
+        var live: Float? = null
+        rule.setContent {
+            ClockScreen(
+                settings = ClockSettings(face = FaceType.DIGITAL, dayBrightness = 0.2f),
+                onUpdate = {},
+                interactive = true,
+                onLiveBrightness = { live = it },
+            )
+        }
+        rule.onRoot().performTouchInput {
+            down(Offset(width * 0.05f, height * 0.8f))
+            repeat(10) { moveBy(Offset(0f, -height * 0.03f)) }
+        }
+        rule.waitForIdle()
+        save("brightness_overlay")
+        val b = live
+        assertTrue("拖曳中應即時回報亮度，實際：$b", b != null && b > 0.2f)
+    }
+
+    /** 中間往左滑：應切到下一個錶面。 */
+    @Test
+    fun horizontalSwipeSwitchesFace() {
+        var settings = ClockSettings(face = FaceType.DIGITAL)
+        rule.setContent {
+            ClockScreen(settings = settings, onUpdate = { f -> settings = f(settings) }, interactive = true)
+        }
+        rule.onRoot().performTouchInput { swipeLeft() }
+        rule.waitForIdle()
+        assertEquals(FaceType.ANALOG, settings.face)
+    }
+
+    /** 中間上下滑：不應改亮度、不應切錶面。 */
+    @Test
+    fun verticalSwipeInMiddleDoesNothing() {
+        var settings = ClockSettings(face = FaceType.DIGITAL)
+        var live: Float? = null
+        rule.setContent {
+            ClockScreen(
+                settings = settings,
+                onUpdate = { f -> settings = f(settings) },
+                interactive = true,
+                onLiveBrightness = { live = it },
+            )
+        }
+        rule.onRoot().performTouchInput {
+            swipe(Offset(width * 0.5f, height * 0.8f), Offset(width * 0.5f, height * 0.2f))
+        }
+        rule.waitForIdle()
+        assertEquals(FaceType.DIGITAL, settings.face)
+        assertEquals(null, live)
     }
 }

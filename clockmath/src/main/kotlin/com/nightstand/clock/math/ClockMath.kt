@@ -261,5 +261,25 @@ object ClockMath {
         else -> clampBrightness(dayBrightness)
     }
 
+    /**
+     * 亮度和「滑桿位置」互換。用平方曲線：同樣滑一段距離，在低亮度時變化比較細，
+     * 夜裡要在 1%～10% 之間微調比較容易。
+     */
+    fun brightnessToSlider(brightness: Float): Float = kotlin.math.sqrt(clampBrightness(brightness))
+
+    fun sliderToBrightness(slider: Float): Float = clampBrightness(slider * slider)
+
+    /**
+     * 從 [start] 亮度開始拖曳，垂直移動了畫面高度的 [dragFraction]（往上為負）後的亮度。
+     * 從最暗滑到最亮剛好約一個畫面高。
+     */
+    fun brightnessAfterDrag(start: Float, dragFraction: Float): Float {
+        val minSlider = kotlin.math.sqrt(MIN_BRIGHTNESS)
+        val slider = (brightnessToSlider(start) - dragFraction * (1f - minSlider)).coerceIn(minSlider, 1f)
+        return sliderToBrightness(slider)
+    }
+
+    fun brightnessPercent(brightness: Float): Int = Math.round(clampBrightness(brightness) * 100f)
+
     private fun twoDigits(value: Int): String = value.toString().padStart(2, '0')
 }

@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
@@ -37,10 +38,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settings by store.settings.collectAsStateWithLifecycle()
             var screen by rememberSaveable { mutableStateOf(Screen.CLOCK) }
+            var liveBrightness by remember { mutableStateOf<Float?>(null) }
 
             ApplyWindowBrightness(
                 window = window,
-                brightness = ClockMath.windowBrightness(
+                brightness = liveBrightness ?: ClockMath.windowBrightness(
                     settings.nightMode,
                     settings.dayBrightness,
                     settings.nightBrightness,
@@ -54,6 +56,7 @@ class MainActivity : ComponentActivity() {
                     onUpdate = store::update,
                     interactive = true,
                     onOpenSettings = { screen = Screen.SETTINGS },
+                    onLiveBrightness = { liveBrightness = it },
                 )
                 Screen.SETTINGS -> AppTheme(settings.nightMode) {
                     SettingsScreen(

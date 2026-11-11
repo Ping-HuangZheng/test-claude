@@ -285,4 +285,46 @@ class ClockMathTest {
         assertEquals(0.01f, ClockMath.windowBrightness(nightMode = true, dayBrightness = -1f, nightBrightness = 0f))
         assertEquals(1f, ClockMath.windowBrightness(nightMode = false, dayBrightness = 3f, nightBrightness = 0.05f))
     }
+
+    @Test
+    fun brightnessAfterDrag_upIsBrighterDownIsDimmer() {
+        assertTrue(ClockMath.brightnessAfterDrag(0.3f, dragFraction = -0.1f) > 0.3f)
+        assertTrue(ClockMath.brightnessAfterDrag(0.3f, dragFraction = 0.1f) < 0.3f)
+        assertEquals(0.3f, ClockMath.brightnessAfterDrag(0.3f, 0f), 0.0001f)
+    }
+
+    @Test
+    fun brightnessAfterDrag_clampsAtBothEnds() {
+        assertEquals(1f, ClockMath.brightnessAfterDrag(0.9f, dragFraction = -2f), 0.0001f)
+        assertEquals(0.01f, ClockMath.brightnessAfterDrag(0.2f, dragFraction = 2f), 0.0001f)
+    }
+
+    @Test
+    fun brightnessAfterDrag_fullScreenHeightCoversWholeRange() {
+        assertEquals(1f, ClockMath.brightnessAfterDrag(0.01f, dragFraction = -1f), 0.0001f)
+        assertEquals(0.01f, ClockMath.brightnessAfterDrag(1f, dragFraction = 1f), 0.0001f)
+    }
+
+    @Test
+    fun brightnessAfterDrag_finerControlAtLowEnd() {
+        // 同樣往上滑 10%：從 2% 開始的變化量，比從 60% 開始的小
+        val low = ClockMath.brightnessAfterDrag(0.02f, -0.1f) - 0.02f
+        val high = ClockMath.brightnessAfterDrag(0.6f, -0.1f) - 0.6f
+        assertTrue(low < high, "low=$low high=$high")
+    }
+
+    @Test
+    fun brightnessSlider_roundTrips() {
+        for (b in listOf(0.01f, 0.05f, 0.3f, 0.77f, 1f)) {
+            assertEquals(b, ClockMath.sliderToBrightness(ClockMath.brightnessToSlider(b)), 0.0001f)
+        }
+    }
+
+    @Test
+    fun brightnessPercent_rounds() {
+        assertEquals(5, ClockMath.brightnessPercent(0.05f))
+        assertEquals(1, ClockMath.brightnessPercent(0f))
+        assertEquals(100, ClockMath.brightnessPercent(1f))
+        assertEquals(35, ClockMath.brightnessPercent(0.349f))
+    }
 }

@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nightstand.clock.data.ClockSettings
 import com.nightstand.clock.data.FaceType
+import com.nightstand.clock.math.ClockMath
 import com.nightstand.clock.math.HourFormat
 
 /** 設定頁。所有改動立刻寫入設定，時鐘畫面和螢幕保護程式馬上跟著變。 */
@@ -89,6 +90,26 @@ fun SettingsScreen(
             SwitchRow("夜間模式", settings.nightMode, "暗紅色文字＋低亮度，適合關燈後") { v ->
                 onUpdate { it.copy(nightMode = v) }
             }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "在時鐘畫面的左右兩側上下滑動可以調亮度（只影響這個 App）。",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ValueRow(
+                title = "白天亮度",
+                value = if (settings.dayBrightness < 0f) "跟隨系統" else "${ClockMath.brightnessPercent(settings.dayBrightness)}%",
+                actionLabel = "跟隨系統",
+                actionEnabled = settings.dayBrightness >= 0f,
+                onAction = { onUpdate { it.copy(dayBrightness = ClockSettings.BRIGHTNESS_FOLLOW_SYSTEM) } },
+            )
+            ValueRow(
+                title = "夜間亮度",
+                value = "${ClockMath.brightnessPercent(settings.nightBrightness)}%",
+                actionLabel = "還原 5%",
+                actionEnabled = settings.nightBrightness != ClockSettings.DEFAULT_NIGHT_BRIGHTNESS,
+                onAction = { onUpdate { it.copy(nightBrightness = ClockSettings.DEFAULT_NIGHT_BRIGHTNESS) } },
+            )
         }
 
         extraSections()
@@ -121,6 +142,26 @@ fun SwitchRow(title: String, checked: Boolean, subtitle: String? = null, onChang
             subtitle?.let { Text(it, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+fun ValueRow(
+    title: String,
+    value: String,
+    actionLabel: String,
+    actionEnabled: Boolean,
+    onAction: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(value, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        OutlinedButton(onClick = onAction, enabled = actionEnabled) { Text(actionLabel) }
     }
 }
 

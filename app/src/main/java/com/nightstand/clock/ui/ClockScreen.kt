@@ -1,5 +1,7 @@
 package com.nightstand.clock.ui
 
+import android.content.Context
+import android.provider.Settings
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -24,6 +26,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,6 +66,8 @@ fun ClockScreen(
     interactive: Boolean,
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
+    /** 拖曳調亮度時即時套用到視窗；null 代表拖曳結束、回到設定值。 */
+    onLiveBrightness: (Float?) -> Unit = {},
 ) {
     val context = LocalContext.current
     val now by rememberClockTime(ClockMath.tickIntervalMillis(settings.showSeconds))
@@ -83,6 +88,18 @@ fun ClockScreen(
         if (controlsVisible) {
             delay(CONTROLS_TIMEOUT_MILLIS)
             controlsVisible = false
+        }
+    }
+
+    // 亮度調整：拖曳中即時預覽，放開才寫入設定（白天、夜間各存一個）。
+    var dragStartBrightness by remember { mutableFloatStateOf(0.5f) }
+    var liveBrightness by remember { mutableStateOf<Float?>(null) }
+    var overlayBrightness by remember { mutableStateOf<Float?>(null) }
+    LaunchedEffect(liveBrightness, overlayBrightness) {
+        // 放開手指 1 秒後收起亮度提示。
+        if (liveBrightness == null && overlayBrightness != null) {
+            delay(1_000)
+            overlayBrightness = null
         }
     }
 
@@ -113,9 +130,25 @@ fun ClockScreen(
             }
             liveScale = null
         },
-        onBrightnessStart = {},
-        onBrightnessDrag = {},
-        onBrightnessEnd = {},
+        onBrightnessStart = {
+            val current = ClockMath.windowBrightness(settings.nightMode, settings.dayBrightness, settings.nightBrightness)
+            dragStartBrightness = if (current < 0f) systemBrightness(context) else current
+            touched()
+        },
+        onBrightnessDrag = { fraction ->
+            val b = ClockMath.brightnessAfterDrag(dragStartBrightness, fraction)
+            liveBrightness = b
+            overlayBrightness = b
+            onLiveBrightness(b)
+        },
+        onBrightnessEnd = {
+            liveBrightness?.let { b ->
+                onUpdate { s -> if (s.nightMode) s.copy(nightBrightness = b) else s.copy(dayBrightness = b) }
+            }
+            liveBrightness = null
+            onLiveBrightness(null)
+            touched()
+        },
     )
 
     Box(
@@ -133,6 +166,18 @@ fun ClockScreen(
         )
 
         if (interactive) {
+            AnimatedVisibility(
+                visible = overlayBrightness != null,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.Center),
+            ) {
+                // 淡出動畫期間 overlayBrightness 已經是 null，沿用最後的數值。
+                var lastShown by remember { mutableFloatStateOf(0.5f) }
+                overlayBrightness?.let { lastShown = it }
+                BrightnessOverlay(lastShown, colors)
+            }
+
             AnimatedVisibility(
                 visible = controlsVisible,
                 enter = fadeIn() + slideInVertically { it / 2 },
@@ -162,6 +207,13 @@ fun ClockScreen(
         }
     }
 }
+
+/** 目前的系統亮度（0..1），讀不到時回傳 0.5。只讀取，不需要權限。 */
+private fun systemBrightness(context: Context): Float = try {
+    Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255f
+} catch (e: Settings.SettingNotFoundException) {
+    0.5f
+}.let(ClockMath::clampBrightness)
 
 /** 時鐘主畫面（純顯示的內層）：所有資料都由參數傳入，方便預覽和截圖測試。 */
 @Composable
