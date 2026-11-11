@@ -32,6 +32,9 @@ enum class ChargeState {
 /** 指針角度，單位是度，從 12 點方向順時針算。 */
 data class HandAngles(val hour: Float, val minute: Float, val second: Float)
 
+/** 防烙印的畫面位移（單位 dp）。 */
+data class PixelShift(val x: Float, val y: Float)
+
 /** 單指拖曳的用途。 */
 enum class DragKind {
     /** 在左右兩側上下滑：調亮度。 */
@@ -212,6 +215,50 @@ object ClockMath {
         dx <= -width * threshold -> 1
         dx >= width * threshold -> -1
         else -> 0
+    }
+
+    // ---- 防烙印 ----
+
+    /** 防烙印位移的最大距離（dp）。 */
+    const val BURN_IN_MAX_SHIFT_DP = 10f
+    private const val BURN_IN_PERIOD_X = 17
+    private const val BURN_IN_PERIOD_Y = 13
+
+    /** 整個 x、y 位移路徑重複一次的分鐘數（17 × 13 = 221 分鐘）。 */
+    const val BURN_IN_CYCLE_MINUTES = BURN_IN_PERIOD_X * BURN_IN_PERIOD_Y
+
+    /**
+     * 第 [minuteIndex] 分鐘時畫面要移多少。
+     * x、y 用兩個互質的週期（17、13 分鐘）走正弦曲線，畫出類似 Lissajous 的路徑：
+     * 每分鐘只移幾 dp（不明顯），但長時間下來會走遍整個 ±[maxShift] 的範圍，像素負擔被分散。
+     */
+    fun burnInShift(minuteIndex: Long, maxShift: Float = BURN_IN_MAX_SHIFT_DP): PixelShift {
+        val ix = Math.floorMod(minuteIndex, BURN_IN_PERIOD_X.toLong()).toDouble()
+        val iy = Math.floorMod(minuteIndex, BURN_IN_PERIOD_Y.toLong()).toDouble()
+        return PixelShift(
+            x = (maxShift * kotlin.math.sin(2 * Math.PI * ix / BURN_IN_PERIOD_X)).toFloat(),
+            y = (maxShift * kotlin.math.sin(2 * Math.PI * iy / BURN_IN_PERIOD_Y)).toFloat(),
+        )
+    }
+
+    // ---- 亮度 ----
+
+    /** 亮度下限 1%，避免整個畫面全黑看不到。 */
+    const val MIN_BRIGHTNESS = 0.01f
+    const val MAX_BRIGHTNESS = 1f
+
+    /** Android 視窗亮度「不覆寫、跟隨系統」的值（WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE）。 */
+    const val BRIGHTNESS_SYSTEM = -1f
+
+    fun clampBrightness(value: Float): Float = value.coerceIn(MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+
+    /**
+     * 要套用到視窗的亮度：夜間模式用夜間亮度；白天若沒設定過（小於 0）就跟隨系統。
+     */
+    fun windowBrightness(nightMode: Boolean, dayBrightness: Float, nightBrightness: Float): Float = when {
+        nightMode -> clampBrightness(nightBrightness)
+        dayBrightness < 0f -> BRIGHTNESS_SYSTEM
+        else -> clampBrightness(dayBrightness)
     }
 
     private fun twoDigits(value: Int): String = value.toString().padStart(2, '0')

@@ -232,4 +232,57 @@ class ClockMathTest {
         assertEquals(0, ClockMath.swipeDirection(-100f, 1000f))
         assertEquals(0, ClockMath.swipeDirection(119f, 1000f))
     }
+
+    // ---- 防烙印 ----
+
+    @Test
+    fun burnInShift_staysWithinMaxShift() {
+        for (m in 0L until 1000L) {
+            val p = ClockMath.burnInShift(m, maxShift = 10f)
+            assertTrue(kotlin.math.abs(p.x) <= 10f && kotlin.math.abs(p.y) <= 10f, "minute $m: $p")
+        }
+    }
+
+    @Test
+    fun burnInShift_movesOnlyALittleEachMinute() {
+        // 相鄰兩分鐘最多移動約 max × 2π / 13 ≈ 4.8dp（每軸），不會突然大跳
+        for (m in 0L until 500L) {
+            val a = ClockMath.burnInShift(m, 10f)
+            val b = ClockMath.burnInShift(m + 1, 10f)
+            assertTrue(kotlin.math.abs(a.x - b.x) <= 5f && kotlin.math.abs(a.y - b.y) <= 5f, "minute $m")
+        }
+    }
+
+    @Test
+    fun burnInShift_actuallyMovesAndCoversRange() {
+        val shifts = (0L until ClockMath.BURN_IN_CYCLE_MINUTES.toLong()).map { ClockMath.burnInShift(it, 10f) }
+        assertTrue(shifts.distinct().size > 100, "位移位置太少")
+        assertTrue(shifts.maxOf { it.x } > 9f && shifts.minOf { it.x } < -9f)
+        assertTrue(shifts.maxOf { it.y } > 9f && shifts.minOf { it.y } < -9f)
+    }
+
+    @Test
+    fun burnInShift_repeatsAfterCycleAndHandlesNegative() {
+        assertEquals(ClockMath.burnInShift(5), ClockMath.burnInShift(5 + ClockMath.BURN_IN_CYCLE_MINUTES.toLong()))
+        assertEquals(ClockMath.burnInShift(-1), ClockMath.burnInShift(ClockMath.BURN_IN_CYCLE_MINUTES - 1L))
+    }
+
+    // ---- 亮度 ----
+
+    @Test
+    fun windowBrightness_dayFollowsSystemUntilSet() {
+        assertEquals(-1f, ClockMath.windowBrightness(nightMode = false, dayBrightness = -1f, nightBrightness = 0.05f))
+        assertEquals(0.6f, ClockMath.windowBrightness(nightMode = false, dayBrightness = 0.6f, nightBrightness = 0.05f))
+    }
+
+    @Test
+    fun windowBrightness_nightUsesNightValue() {
+        assertEquals(0.05f, ClockMath.windowBrightness(nightMode = true, dayBrightness = 0.8f, nightBrightness = 0.05f))
+    }
+
+    @Test
+    fun windowBrightness_clampsToValidRange() {
+        assertEquals(0.01f, ClockMath.windowBrightness(nightMode = true, dayBrightness = -1f, nightBrightness = 0f))
+        assertEquals(1f, ClockMath.windowBrightness(nightMode = false, dayBrightness = 3f, nightBrightness = 0.05f))
+    }
 }

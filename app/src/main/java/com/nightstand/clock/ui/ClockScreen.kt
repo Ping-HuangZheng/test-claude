@@ -3,6 +3,8 @@ package com.nightstand.clock.ui
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.fadeIn
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
@@ -176,6 +179,11 @@ fun ClockContent(
     val time = ClockMath.timeParts(now.hour, now.minute, now.second, use24, settings.showSeconds)
     val date = ClockMath.dateText(now.monthValue, now.dayOfMonth, now.dayOfWeek.value)
 
+    // 防烙印：每分鐘把整個畫面移一點，用 2 秒慢慢滑過去，看不出跳動。
+    val shift = ClockMath.burnInShift(now.toEpochSecond() / 60)
+    val shiftX by animateDpAsState(shift.x.dp, tween(2_000), label = "shiftX")
+    val shiftY by animateDpAsState(shift.y.dp, tween(2_000), label = "shiftY")
+
     BoxWithConstraints(
         modifier
             .fillMaxSize()
@@ -185,7 +193,12 @@ fun ClockContent(
         // 資訊文字大小跟著螢幕大小走：手機約 18dp，平板會大一些。
         val infoSize = (min(maxWidth, maxHeight) * 0.045f).coerceIn(14.dp, 30.dp)
 
-        Box(Modifier.fillMaxSize().padding(infoSize)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(infoSize)
+                .offset(shiftX, shiftY),
+        ) {
             StatusRow(
                 date = date,
                 extra = null,

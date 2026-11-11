@@ -1,6 +1,7 @@
 package com.nightstand.clock
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -14,6 +15,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nightstand.clock.data.SettingsStore
+import com.nightstand.clock.math.ClockMath
+import com.nightstand.clock.ui.ApplyWindowBrightness
 import com.nightstand.clock.ui.ClockScreen
 import com.nightstand.clock.ui.SettingsScreen
 import com.nightstand.clock.ui.theme.AppTheme
@@ -29,9 +32,20 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         hideSystemBars()
+        // 待機時鐘：App 開著時螢幕一直亮著。
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
             val settings by store.settings.collectAsStateWithLifecycle()
             var screen by rememberSaveable { mutableStateOf(Screen.CLOCK) }
+
+            ApplyWindowBrightness(
+                window = window,
+                brightness = ClockMath.windowBrightness(
+                    settings.nightMode,
+                    settings.dayBrightness,
+                    settings.nightBrightness,
+                ),
+            )
             BackHandler(enabled = screen != Screen.CLOCK) { screen = Screen.CLOCK }
 
             when (screen) {
