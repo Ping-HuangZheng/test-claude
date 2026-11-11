@@ -1,5 +1,10 @@
 package com.nightstand.clock.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nightstand.clock.data.ClockSettings
@@ -112,8 +118,43 @@ fun SettingsScreen(
             )
         }
 
+        Section("充電待機（螢幕保護程式）") {
+            val context = LocalContext.current
+            Text(
+                "要在充電時自動顯示時鐘，請到系統設定選擇：\n" +
+                    "設定 → 顯示 → 螢幕保護程式 → 選「待機時鐘」，啟動時機選「充電時」。\n" +
+                    "螢幕保護程式會沿用這裡的錶面、夜間模式和亮度；碰一下螢幕就會結束。",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = { openDreamSettings(context) }) {
+                Text("開啟系統螢幕保護程式設定")
+            }
+        }
+
         extraSections()
     }
+}
+
+/** 打開系統的螢幕保護程式設定；有些廠牌拿掉了這頁，就退而打開顯示設定。 */
+private fun openDreamSettings(context: Context) {
+    val intents = listOf(
+        Intent(Settings.ACTION_DREAM_SETTINGS),
+        Intent(Settings.ACTION_DISPLAY_SETTINGS),
+    )
+    for (intent in intents) {
+        try {
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            if (intent.action == Settings.ACTION_DISPLAY_SETTINGS) {
+                Toast.makeText(context, "找不到螢幕保護程式設定，請在顯示設定裡找找看", Toast.LENGTH_LONG).show()
+            }
+            return
+        } catch (e: ActivityNotFoundException) {
+            // 試下一個
+        }
+    }
+    Toast.makeText(context, "這支手機沒有螢幕保護程式設定", Toast.LENGTH_LONG).show()
 }
 
 @Composable

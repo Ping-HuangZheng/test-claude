@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 系統螢幕保護程式清單裡「設定」齒輪會打開 App。 -->
+<dream xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="com.nightstand.clock/.MainActivity" />
