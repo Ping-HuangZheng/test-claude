@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
@@ -257,7 +258,7 @@ fun ClockContent(
             Modifier
                 .fillMaxSize()
                 .padding(infoSize)
-                .offset(shiftX, shiftY),
+                .offset { IntOffset(shiftX.roundToPx(), shiftY.roundToPx()) },
         ) {
             StatusRow(
                 date = date,

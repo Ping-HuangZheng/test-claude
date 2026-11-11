@@ -2,6 +2,7 @@ package com.nightstand.clock.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import com.nightstand.clock.math.AlarmConfig
 import com.nightstand.clock.math.HourFormat
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,7 +83,7 @@ class SettingsStore private constructor(context: Context) {
     }
 
     private fun save(s: ClockSettings) {
-        prefs.edit().apply {
+        prefs.edit {
             putString(KEY_FACE, s.face.name)
             FaceType.entries.forEach { putFloat(scaleKey(it), s.faceScales[it.ordinal]) }
             putBoolean(KEY_NIGHT, s.nightMode)
@@ -96,7 +97,7 @@ class SettingsStore private constructor(context: Context) {
             putInt(KEY_ALARM_MINUTE, s.alarm.minute)
             putInt(KEY_ALARM_REPEAT, s.alarm.repeatMask)
             putLong(KEY_ALARM_SNOOZE, s.alarm.snoozeUntilMillis)
-        }.apply()
+        }
     }
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =

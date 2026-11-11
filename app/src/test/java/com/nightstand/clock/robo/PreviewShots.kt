@@ -8,7 +8,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import com.nightstand.clock.data.BatteryInfo
 import com.nightstand.clock.data.ClockSettings
 import com.nightstand.clock.data.FaceType
@@ -245,5 +247,30 @@ class PreviewShots {
         AppTheme(nightMode = true) {
             RingScreen(settings = ClockSettings(nightMode = true), onSnooze = {}, onDismiss = {})
         }
+    }
+
+    /** 點畫面叫出控制列；點控制列上的按鈕要執行動作，而不是把控制列當成「點畫面」收起來。 */
+    @Test
+    fun controlBarButtonsWorkAndTapTogglesBar() {
+        var settings = ClockSettings(face = FaceType.DIGITAL)
+        var openedSettings = false
+        rule.setContent {
+            ClockScreen(
+                settings = settings,
+                onUpdate = { f -> settings = f(settings) },
+                interactive = true,
+                onOpenSettings = { openedSettings = true },
+            )
+        }
+        rule.onRoot().performTouchInput { click(center) }
+        rule.waitForIdle()
+        rule.onNodeWithText("夜間模式").performClick()
+        rule.waitForIdle()
+        assertTrue("按控制列的夜間模式要切換", settings.nightMode)
+        rule.onNodeWithText("›").performClick()
+        rule.waitForIdle()
+        assertEquals(FaceType.ANALOG, settings.face)
+        rule.onNodeWithText("設定").assertExists().performClick()
+        assertTrue(openedSettings)
     }
 }

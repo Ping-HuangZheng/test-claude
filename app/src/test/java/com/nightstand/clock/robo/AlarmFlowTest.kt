@@ -127,7 +127,7 @@ class AlarmFlowTest {
     fun bootReschedulesFromSavedSettings() {
         // 模擬重開機：設定還在，但系統排程被清掉了。
         store.update { it.copy(alarm = AlarmConfig(enabled = true, hour = 6, minute = 15)) }
-        alarms.scheduledAlarms.toList().forEach { a -> a.operation?.let { app.getSystemService(AlarmManager::class.java).cancel(it) } }
+        com.nightstand.clock.alarm.AlarmScheduler.sync(app, AlarmConfig())
         assertNull(alarms.peekNextScheduledAlarm())
 
         BootReceiver().onReceive(app, Intent(Intent.ACTION_BOOT_COMPLETED))
