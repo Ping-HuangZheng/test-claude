@@ -17,6 +17,18 @@ data class TimeParts(
     val period: String?,
 )
 
+/** 充電狀態（已經把 Android 電池廣播的原始值整理過）。 */
+enum class ChargeState {
+    /** 沒接電源。 */
+    DISCHARGING,
+    /** 接著電源、正在充電。 */
+    CHARGING,
+    /** 接著電源、已充飽。 */
+    FULL,
+    /** 接著電源但沒有在充（例如手機的電池保護暫停在 80%）。 */
+    PLUGGED_NOT_CHARGING,
+}
+
 /**
  * 和 Android 無關的時鐘計算。這裡的函式都是純函式，方便用 JVM 單元測試驗證。
  */
@@ -82,6 +94,56 @@ object ClockMath {
     fun millisUntilNextTick(nowMillis: Long, intervalMillis: Long): Long {
         require(intervalMillis > 0) { "intervalMillis 必須大於 0" }
         return intervalMillis - Math.floorMod(nowMillis, intervalMillis)
+    }
+
+    // ---- 日期 ----
+
+    private val WEEKDAYS = listOf("週一", "週二", "週三", "週四", "週五", "週六", "週日")
+
+    /** 「11月11日 週三」。[isoDayOfWeek]：1 = 週一 … 7 = 週日（和 java.time.DayOfWeek 相同）。 */
+    fun dateText(month: Int, day: Int, isoDayOfWeek: Int): String {
+        require(month in 1..12) { "month 超出範圍：$month" }
+        require(day in 1..31) { "day 超出範圍：$day" }
+        return "${month}月${day}日 ${weekdayName(isoDayOfWeek)}"
+    }
+
+    fun weekdayName(isoDayOfWeek: Int): String {
+        require(isoDayOfWeek in 1..7) { "isoDayOfWeek 超出範圍：$isoDayOfWeek" }
+        return WEEKDAYS[isoDayOfWeek - 1]
+    }
+
+    // ---- 電量 ----
+
+    // 和 android.os.BatteryManager 的常數值相同，這裡複製一份以免依賴 Android。
+    const val BATTERY_STATUS_CHARGING = 2
+    const val BATTERY_STATUS_FULL = 5
+
+    /** 電量百分比（四捨五入，0..100）；資料無效時回傳 null。 */
+    fun batteryPercent(level: Int, scale: Int): Int? {
+        if (level < 0 || scale <= 0) return null
+        return Math.round(level * 100f / scale).coerceIn(0, 100)
+    }
+
+    /**
+     * 由電池廣播的 status 和 plugged 判斷充電狀態。
+     * 以「有沒有接電源」為準：拔掉電源後系統有時仍短暫回報 FULL，這種情況算放電。
+     */
+    fun chargeState(status: Int, plugged: Int): ChargeState = when {
+        plugged == 0 -> ChargeState.DISCHARGING
+        status == BATTERY_STATUS_CHARGING -> ChargeState.CHARGING
+        status == BATTERY_STATUS_FULL -> ChargeState.FULL
+        else -> ChargeState.PLUGGED_NOT_CHARGING
+    }
+
+    /** 右上角顯示的電量文字，例如「充電中 85%」。 */
+    fun batteryLabel(percent: Int?, state: ChargeState): String {
+        val pct = percent?.let { "$it%" } ?: "--%"
+        return when (state) {
+            ChargeState.DISCHARGING -> pct
+            ChargeState.CHARGING -> "充電中 $pct"
+            ChargeState.FULL -> "已充飽 $pct"
+            ChargeState.PLUGGED_NOT_CHARGING -> "已接電源 $pct"
+        }
     }
 
     private fun twoDigits(value: Int): String = value.toString().padStart(2, '0')

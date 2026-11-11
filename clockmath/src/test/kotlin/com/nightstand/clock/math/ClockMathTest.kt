@@ -91,4 +91,62 @@ class ClockMathTest {
         assertEquals(1L, ClockMath.millisUntilNextTick(119_999L, 60_000L))
         assertEquals(750L, ClockMath.millisUntilNextTick(10_250L, 1_000L))
     }
+
+    // ---- 日期 ----
+
+    @Test
+    fun dateText_formatsMonthDayAndWeekday() {
+        assertEquals("11月11日 週三", ClockMath.dateText(11, 11, 3))
+        assertEquals("1月1日 週日", ClockMath.dateText(1, 1, 7))
+        assertEquals("12月31日 週一", ClockMath.dateText(12, 31, 1))
+    }
+
+    @Test
+    fun dateText_rejectsInvalidWeekday() {
+        assertFailsWith<IllegalArgumentException> { ClockMath.dateText(1, 1, 0) }
+        assertFailsWith<IllegalArgumentException> { ClockMath.dateText(1, 1, 8) }
+    }
+
+    // ---- 電量 ----
+
+    @Test
+    fun batteryPercent_scalesAndRounds() {
+        assertEquals(85, ClockMath.batteryPercent(85, 100))
+        assertEquals(50, ClockMath.batteryPercent(128, 255)) // 50.2% → 50
+        assertEquals(100, ClockMath.batteryPercent(255, 255))
+        assertEquals(0, ClockMath.batteryPercent(0, 100))
+    }
+
+    @Test
+    fun batteryPercent_invalidDataIsNull() {
+        assertNull(ClockMath.batteryPercent(-1, 100))
+        assertNull(ClockMath.batteryPercent(50, 0))
+    }
+
+    @Test
+    fun batteryPercent_clampsAboveScale() {
+        assertEquals(100, ClockMath.batteryPercent(120, 100))
+    }
+
+    @Test
+    fun chargeState_unpluggedIsAlwaysDischarging() {
+        assertEquals(ChargeState.DISCHARGING, ClockMath.chargeState(status = 5, plugged = 0))
+        assertEquals(ChargeState.DISCHARGING, ClockMath.chargeState(status = 2, plugged = 0))
+    }
+
+    @Test
+    fun chargeState_pluggedStates() {
+        assertEquals(ChargeState.CHARGING, ClockMath.chargeState(status = 2, plugged = 1))
+        assertEquals(ChargeState.FULL, ClockMath.chargeState(status = 5, plugged = 2))
+        assertEquals(ChargeState.PLUGGED_NOT_CHARGING, ClockMath.chargeState(status = 4, plugged = 4))
+    }
+
+    @Test
+    fun batteryLabel_textPerState() {
+        assertEquals("85%", ClockMath.batteryLabel(85, ChargeState.DISCHARGING))
+        assertEquals("充電中 85%", ClockMath.batteryLabel(85, ChargeState.CHARGING))
+        assertEquals("已充飽 100%", ClockMath.batteryLabel(100, ChargeState.FULL))
+        assertEquals("已接電源 80%", ClockMath.batteryLabel(80, ChargeState.PLUGGED_NOT_CHARGING))
+        assertEquals("--%", ClockMath.batteryLabel(null, ChargeState.DISCHARGING))
+    }
 }
