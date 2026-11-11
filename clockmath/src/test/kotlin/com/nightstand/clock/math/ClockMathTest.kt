@@ -149,4 +149,87 @@ class ClockMathTest {
         assertEquals("已接電源 80%", ClockMath.batteryLabel(80, ChargeState.PLUGGED_NOT_CHARGING))
         assertEquals("--%", ClockMath.batteryLabel(null, ChargeState.DISCHARGING))
     }
+
+    // ---- 指針角度 ----
+
+    private fun assertAngles(expected: HandAngles, actual: HandAngles) {
+        assertEquals(expected.hour, actual.hour, 0.001f, "hour")
+        assertEquals(expected.minute, actual.minute, 0.001f, "minute")
+        assertEquals(expected.second, actual.second, 0.001f, "second")
+    }
+
+    @Test
+    fun handAngles_midnightAndNoonPointUp() {
+        assertAngles(HandAngles(0f, 0f, 0f), ClockMath.handAngles(0, 0, 0))
+        assertAngles(HandAngles(0f, 0f, 0f), ClockMath.handAngles(12, 0, 0))
+    }
+
+    @Test
+    fun handAngles_threeOClockIsNinetyDegrees() {
+        assertAngles(HandAngles(90f, 0f, 0f), ClockMath.handAngles(15, 0, 0))
+    }
+
+    @Test
+    fun handAngles_hourHandMovesWithMinutes() {
+        // 9:30 → 時針在 9 和 10 中間（285 度），分針指向 6（180 度）
+        assertAngles(HandAngles(285f, 180f, 0f), ClockMath.handAngles(9, 30, 0))
+    }
+
+    @Test
+    fun handAngles_secondsMoveMinuteHand() {
+        // 0:00:30 → 秒針 180 度、分針前進半格 3 度、時針前進 0.25 度
+        assertAngles(HandAngles(0.25f, 3f, 180f), ClockMath.handAngles(0, 0, 30))
+    }
+
+    @Test
+    fun handAngles_justBeforeMidnight() {
+        val a = ClockMath.handAngles(23, 59, 59)
+        assertTrue(a.hour < 360f && a.hour > 359.9f)
+        assertTrue(a.minute < 360f && a.minute > 359.8f)
+        assertEquals(354f, a.second, 0.001f)
+    }
+
+    // ---- 縮放 ----
+
+    @Test
+    fun clampScale_limitsRange() {
+        assertEquals(0.5f, ClockMath.clampScale(0.1f))
+        assertEquals(2f, ClockMath.clampScale(5f))
+        assertEquals(1.3f, ClockMath.clampScale(1.3f))
+    }
+
+    // ---- 手勢 ----
+
+    @Test
+    fun isInEdgeZone_onlyNearLeftOrRightEdges() {
+        assertTrue(ClockMath.isInEdgeZone(10f, 1000f))
+        assertTrue(ClockMath.isInEdgeZone(990f, 1000f))
+        assertFalse(ClockMath.isInEdgeZone(500f, 1000f))
+        assertFalse(ClockMath.isInEdgeZone(150f, 1000f))
+    }
+
+    @Test
+    fun classifyDrag_horizontalIsSwipeAnywhere() {
+        assertEquals(DragKind.SWIPE, ClockMath.classifyDrag(500f, 1000f, dx = -40f, dy = 10f))
+        assertEquals(DragKind.SWIPE, ClockMath.classifyDrag(20f, 1000f, dx = 40f, dy = -10f))
+    }
+
+    @Test
+    fun classifyDrag_verticalAtEdgeIsBrightness() {
+        assertEquals(DragKind.BRIGHTNESS, ClockMath.classifyDrag(20f, 1000f, dx = 5f, dy = -40f))
+        assertEquals(DragKind.BRIGHTNESS, ClockMath.classifyDrag(980f, 1000f, dx = -5f, dy = 40f))
+    }
+
+    @Test
+    fun classifyDrag_verticalInMiddleDoesNothing() {
+        assertEquals(DragKind.NONE, ClockMath.classifyDrag(500f, 1000f, dx = 5f, dy = 40f))
+    }
+
+    @Test
+    fun swipeDirection_needsEnoughDistance() {
+        assertEquals(1, ClockMath.swipeDirection(-200f, 1000f))
+        assertEquals(-1, ClockMath.swipeDirection(200f, 1000f))
+        assertEquals(0, ClockMath.swipeDirection(-100f, 1000f))
+        assertEquals(0, ClockMath.swipeDirection(119f, 1000f))
+    }
 }

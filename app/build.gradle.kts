@@ -31,6 +31,28 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+}
+
+// 截圖預覽（Robolectric 把畫面畫成 PNG）只在加上 -Ppreview 時執行，
+// 一般的 ./gradlew test 不跑，保持單元測試又快又單純。
+tasks.withType<Test>().configureEach {
+    if (!project.hasProperty("preview")) {
+        exclude("**/preview/**")
+        // app 目前只有預覽測試，排除後沒有測試可跑是正常的。
+        failOnNoDiscoveredTests = false
+    }
+    // Robolectric 在 JDK 17+ 需要存取 JDK 內部 API。
+    jvmArgs(
+        "--add-exports", "java.base/jdk.internal.access=ALL-UNNAMED",
+        "--add-opens", "java.base/java.io=ALL-UNNAMED",
+    )
+    systemProperty("preview.outDir", rootProject.layout.buildDirectory.dir("preview").get().asFile.absolutePath)
 }
 
 dependencies {
@@ -45,4 +67,10 @@ dependencies {
     implementation(libs.compose.material3)
 
     coreLibraryDesugaring(libs.desugar.jdk.libs)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

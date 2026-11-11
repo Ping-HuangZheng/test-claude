@@ -22,7 +22,11 @@ class MainActivity : ComponentActivity() {
         hideSystemBars()
         setContent {
             val settings by store.settings.collectAsStateWithLifecycle()
-            ClockScreen(settings = settings)
+            ClockScreen(
+                settings = settings,
+                onUpdate = store::update,
+                interactive = true,
+            )
         }
     }
 

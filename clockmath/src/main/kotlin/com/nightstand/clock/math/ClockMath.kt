@@ -29,6 +29,19 @@ enum class ChargeState {
     PLUGGED_NOT_CHARGING,
 }
 
+/** 指針角度，單位是度，從 12 點方向順時針算。 */
+data class HandAngles(val hour: Float, val minute: Float, val second: Float)
+
+/** 單指拖曳的用途。 */
+enum class DragKind {
+    /** 在左右兩側上下滑：調亮度。 */
+    BRIGHTNESS,
+    /** 水平滑動：切換錶面。 */
+    SWIPE,
+    /** 在中間上下滑：不做事。 */
+    NONE,
+}
+
 /**
  * 和 Android 無關的時鐘計算。這裡的函式都是純函式，方便用 JVM 單元測試驗證。
  */
@@ -144,6 +157,61 @@ object ClockMath {
             ChargeState.FULL -> "已充飽 $pct"
             ChargeState.PLUGGED_NOT_CHARGING -> "已接電源 $pct"
         }
+    }
+
+    // ---- 指針角度 ----
+
+    /** 時針會隨分秒緩慢前進；分針隨秒前進；秒針每秒 6 度。 */
+    fun handAngles(hour24: Int, minute: Int, second: Int): HandAngles {
+        val sec = second.toFloat()
+        val min = minute + sec / 60f
+        val hr = (hour24 % 12) + min / 60f
+        return HandAngles(
+            hour = hr * 30f,
+            minute = min * 6f,
+            second = sec * 6f,
+        )
+    }
+
+    // ---- 縮放 ----
+
+    const val MIN_FACE_SCALE = 0.5f
+    const val MAX_FACE_SCALE = 2f
+
+    fun clampScale(scale: Float): Float = scale.coerceIn(MIN_FACE_SCALE, MAX_FACE_SCALE)
+
+    // ---- 手勢 ----
+
+    /** 左右各佔畫面寬度 15% 的直條是亮度調整區。 */
+    const val EDGE_ZONE_FRACTION = 0.15f
+
+    /** 水平滑動超過畫面寬度 12% 才算切換錶面。 */
+    const val SWIPE_THRESHOLD_FRACTION = 0.12f
+
+    fun isInEdgeZone(x: Float, width: Float, edgeFraction: Float = EDGE_ZONE_FRACTION): Boolean =
+        x < width * edgeFraction || x > width * (1f - edgeFraction)
+
+    /**
+     * 手指移動超過觸控門檻後，判斷這次拖曳要做什麼：
+     * 以水平為主 → 切換錶面；以垂直為主且從兩側開始 → 調亮度；其餘不處理。
+     */
+    fun classifyDrag(
+        startX: Float,
+        width: Float,
+        dx: Float,
+        dy: Float,
+        edgeFraction: Float = EDGE_ZONE_FRACTION,
+    ): DragKind = when {
+        kotlin.math.abs(dx) >= kotlin.math.abs(dy) -> DragKind.SWIPE
+        isInEdgeZone(startX, width, edgeFraction) -> DragKind.BRIGHTNESS
+        else -> DragKind.NONE
+    }
+
+    /** 往左滑（dx 為負）→ 下一個錶面 +1；往右滑 → 上一個 -1；距離不夠 → 0。 */
+    fun swipeDirection(dx: Float, width: Float, threshold: Float = SWIPE_THRESHOLD_FRACTION): Int = when {
+        dx <= -width * threshold -> 1
+        dx >= width * threshold -> -1
+        else -> 0
     }
 
     private fun twoDigits(value: Int): String = value.toString().padStart(2, '0')
